@@ -16,8 +16,6 @@ import android.util.SparseArray;
 import com.facebook.react.bridge.ActivityEventListener;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Callback;
-import com.facebook.react.bridge.ReactApplicationContext;
-import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.ReadableMap;
@@ -39,8 +37,21 @@ import org.webrtc.*;
 import org.webrtc.audio.AudioDeviceModule;
 import org.webrtc.audio.JavaAudioDeviceModule;
 
-@ReactModule(name = "WebRTCModule")
-public class WebRTCModule extends ReactContextBaseJavaModule implements ActivityEventListener {
+import org.apache.cordova.CallbackContext;
+import org.apache.cordova.CordovaPlugin;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+public class WebRTCModule extends CordovaPlugin {
+    public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+        if (action.equals('getDisplayMedia')) {
+            getDisplayMedia(args.get(0), callbackContext)
+            return true;
+        }
+        return false;
+    }
+
     static final String TAG = WebRTCModule.class.getCanonicalName();
 
     PeerConnectionFactory mFactory;
@@ -55,7 +66,7 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
 
     private final SparseArray<Callback> mCallbacks;
     private int mRequestCode = 0;
-    private final ReactApplicationContext reactContext;
+    private final Context context;
 
     /**
      * The application/library-specific private members of local
@@ -219,19 +230,19 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         }
     }
 
-    public WebRTCModule(ReactApplicationContext reactContext) {
-        this(reactContext, null);
+    public WebRTCModule(Context context) {
+        this(context, null);
     }
 
-    public WebRTCModule(ReactApplicationContext reactContext, Options options) {
-        super(reactContext);
+    public WebRTCModule(Context context, Options options) {
+        super(context);
 
         mPeerConnectionObservers = new SparseArray<>();
         localStreams = new HashMap<>();
 
         mCallbacks = new SparseArray<Callback>();
-        this.reactContext = reactContext;
-        reactContext.addActivityEventListener(this);
+        this.context = webView.getContext();
+        context.addActivityEventListener(this);
 
         ThreadUtils.runOnExecutor(() -> initAsync(options));
     }
@@ -240,10 +251,10 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
      * Invoked asynchronously to initialize this {@code WebRTCModule} instance.
      */
     private void initAsync(Options options) {
-        ReactApplicationContext reactContext = getReactApplicationContext();
+        Context context = getContext();
 
         PeerConnectionFactory.initialize(
-            PeerConnectionFactory.InitializationOptions.builder(reactContext)
+            PeerConnectionFactory.InitializationOptions.builder(context)
                 .createInitializationOptions());
 
         AudioDeviceModule adm = null;
@@ -274,7 +285,7 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         }
 
         if (adm == null) {
-            adm = JavaAudioDeviceModule.builder(reactContext).createAudioDeviceModule();
+            adm = JavaAudioDeviceModule.builder(context).createAudioDeviceModule();
         }
 
         mFactory
@@ -284,7 +295,7 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
                 .setVideoDecoderFactory(decoderFactory)
                 .createPeerConnectionFactory();
 
-        getUserMediaImpl = new GetUserMediaImpl(this, reactContext);
+        getUserMediaImpl = new GetUserMediaImpl(this, context);
     }
 
     @Override
@@ -298,7 +309,7 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
     }
 
     void sendEvent(String eventName, @Nullable WritableMap params) {
-        getReactApplicationContext()
+        webView.getContext()
             .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
             .emit(eventName, params);
     }
@@ -545,7 +556,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         return conf;
     }
 
-    @ReactMethod
     public void peerConnectionInit(ReadableMap configuration, int id) {
         PeerConnection.RTCConfiguration rtcConfiguration
             = parseRTCConfiguration(configuration);
@@ -640,7 +650,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         return mediaConstraints;
     }
 
-    @ReactMethod
     public void getUserMedia(ReadableMap constraints,
                              Callback    successCallback,
                              Callback    errorCallback) {
@@ -648,25 +657,23 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
             getUserMediaImpl.getUserMedia(constraints, successCallback, errorCallback));
     }
 
-    @TargetApi(21)
-    @ReactMethod
-    public void getDisplayMedia(ReadableMap constraints, Callback successCallback, Callback errorCallback) {
+    public void getDisplayMedia(JSONObject constraints, CallbackContext callbackContext) {
+        final Context context = webView.getContext();
         mCallbacks.put(mRequestCode, new Callback() {
-
             @Override
             public void invoke(final Object... args) {
                 ThreadUtils.runOnExecutor(() -> {
                     int resultCode = (int) args[1];
                     if (resultCode != Activity.RESULT_OK) {
-                        errorCallback.invoke("DOMException", "AbortError");
+                        callbackContext.error("DOMException", "AbortError");
                         return;
                     }
                     VideoTrack track = null;
-                    if (constraints.hasKey("video")) {
+                    if (constraints.get("video")) {
                         track = createVideoTrack(constraints, new ScreenCapturerAndroid((Intent) args[2], new MediaProjection.Callback() {}));
                     }
                     if (track == null) {
-                        errorCallback.invoke("DOMException", "AbortError");
+                        callbackContext.error("DOMException", "AbortError");
                         return;
                     }
                     String streamId = UUID.randomUUID().toString();
@@ -688,19 +695,19 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
                     Log.d(TAG, "MediaStream id: " + streamId);
                     localStreams.put(streamId, mediaStream);
 
-                    successCallback.invoke(streamId, tracks);
+                    callbackContext.success(streamId, tracks);
                 });
             }
         });
-        MediaProjectionManager mediaProjectionManager = (MediaProjectionManager) reactContext.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
-        reactContext.startActivityForResult(
-            mediaProjectionManager.createScreenCaptureIntent(), mRequestCode, null);
+        MediaProjectionManager mediaProjectionManager = (MediaProjectionManager) context.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+        context.startActivityForResult(
+            this, mediaProjectionManager.createScreenCaptureIntent(), mRequestCode);
         mRequestCode++;
     }
 
     @Override
-    public void onActivityResult(Activity activity, int requestCode, int resultCode, Intent data) {
-        mCallbacks.get(requestCode).invoke(activity, resultCode, data);
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        mCallbacks.get(requestCode).invoke(null, resultCode, data);
         mCallbacks.remove(requestCode);
     }
 
@@ -712,6 +719,7 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
     }
 
     private VideoTrack createVideoTrack(ReadableMap constraints, VideoCapturer videoCapturer) {
+        final Context context = webView.getContext();
         ReadableMap videoConstraintsMap = constraints.getMap("video");
 
         Log.d(TAG, "getDisplayMedia(video): " + videoConstraintsMap);
@@ -725,7 +733,7 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         // When in SFU mode, screen video source cannot distrubute frames after a recreation.
         //
         VideoSource videoSource = pcFactory.createVideoSource(false);
-        videoCapturer.initialize(surfaceTextureHelper, reactContext, new CapturerObserverProxy(videoSource.getCapturerObserver(), surfaceTextureHelper.getHandler()));
+        videoCapturer.initialize(surfaceTextureHelper, context, new CapturerObserverProxy(videoSource.getCapturerObserver(), surfaceTextureHelper.getHandler()));
 
         String id = UUID.randomUUID().toString();
         VideoTrack track = pcFactory.createVideoTrack(id, videoSource);
@@ -746,13 +754,11 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         return track;
     }
 
-    @ReactMethod
     public void enumerateDevices(Callback callback) {
         ThreadUtils.runOnExecutor(() ->
             callback.invoke(getUserMediaImpl.enumerateDevices()));
     }
 
-    @ReactMethod
     public void mediaStreamCreate(String id) {
         ThreadUtils.runOnExecutor(() -> mediaStreamCreateAsync(id));
     }
@@ -762,7 +768,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         localStreams.put(id, mediaStream);
     }
 
-    @ReactMethod
     public void mediaStreamAddTrack(String streamId, String trackId) {
         ThreadUtils.runOnExecutor(() ->
             mediaStreamAddTrackAsync(streamId, trackId));
@@ -791,7 +796,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         }
     }
 
-    @ReactMethod
     public void mediaStreamRemoveTrack(String streamId, String trackId) {
         ThreadUtils.runOnExecutor(() ->
             mediaStreamRemoveTrackAsync(streamId, trackId));
@@ -820,7 +824,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         }
     }
 
-    @ReactMethod
     public void mediaStreamRelease(String id) {
         ThreadUtils.runOnExecutor(() -> mediaStreamReleaseAsync(id));
     }
@@ -867,7 +870,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         stream.dispose();
     }
 
-    @ReactMethod
     public void mediaStreamTrackRelease(String id) {
         ThreadUtils.runOnExecutor(() ->
             mediaStreamTrackReleaseAsync(id));
@@ -889,7 +891,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         getUserMediaImpl.disposeTrack(id);
     }
 
-    @ReactMethod
     public void mediaStreamTrackSetEnabled(String id, boolean enabled) {
         ThreadUtils.runOnExecutor(() ->
             mediaStreamTrackSetEnabledAsync(id, enabled));
@@ -928,7 +929,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         getUserMediaImpl.mediaStreamTrackSetEnabled(id, enabled);
     }
 
-    @ReactMethod
     public void mediaStreamTrackSwitchCamera(String id) {
         MediaStreamTrack track = getLocalTrack(id);
         if (track != null) {
@@ -936,7 +936,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         }
     }
 
-    @ReactMethod
     public void peerConnectionSetConfiguration(ReadableMap configuration,
                                                int id) {
         ThreadUtils.runOnExecutor(() ->
@@ -953,7 +952,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         peerConnection.setConfiguration(parseRTCConfiguration(configuration));
     }
 
-    @ReactMethod
     public void peerConnectionAddStream(String streamId, int id) {
         ThreadUtils.runOnExecutor(() ->
             peerConnectionAddStreamAsync(streamId, id));
@@ -971,7 +969,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         }
     }
 
-    @ReactMethod
     public void peerConnectionRemoveStream(String streamId, int id) {
         ThreadUtils.runOnExecutor(() ->
             peerConnectionRemoveStreamAsync(streamId, id));
@@ -989,7 +986,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         }
     }
 
-    @ReactMethod
     public void peerConnectionCreateOffer(int id,
                                           ReadableMap options,
                                           Callback callback) {
@@ -1029,7 +1025,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         }
     }
 
-    @ReactMethod
     public void peerConnectionCreateAnswer(int id,
                                            ReadableMap options,
                                            Callback callback) {
@@ -1069,7 +1064,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         }
     }
 
-    @ReactMethod
     public void peerConnectionSetLocalDescription(ReadableMap sdpMap,
                                                   int id,
                                                   Callback callback) {
@@ -1115,7 +1109,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         Log.d(TAG, "peerConnectionSetLocalDescription() end");
     }
 
-    @ReactMethod
     public void peerConnectionSetRemoteDescription(ReadableMap sdpMap,
                                                    int id,
                                                    Callback callback) {
@@ -1161,7 +1154,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         Log.d(TAG, "peerConnectionSetRemoteDescription() end");
     }
 
-    @ReactMethod
     public void peerConnectionAddICECandidate(ReadableMap candidateMap,
                                               int id,
                                               Callback callback) {
@@ -1189,7 +1181,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         Log.d(TAG, "peerConnectionAddICECandidate() end");
     }
 
-    @ReactMethod
     public void peerConnectionGetStats(String trackId, int id, Callback cb) {
         ThreadUtils.runOnExecutor(() ->
             peerConnectionGetStatsAsync(trackId, id, cb));
@@ -1207,7 +1198,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         }
     }
 
-    @ReactMethod
     public void peerConnectionClose(int id) {
         ThreadUtils.runOnExecutor(() -> peerConnectionCloseAsync(id));
     }
@@ -1222,7 +1212,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         }
     }
 
-    @ReactMethod
     public void createDataChannel(int peerConnectionId,
                                   String label,
                                   ReadableMap config) {
@@ -1244,7 +1233,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         }
     }
 
-    @ReactMethod
     public void dataChannelClose(int peerConnectionId, int dataChannelId) {
         ThreadUtils.runOnExecutor(() ->
             dataChannelCloseAsync(peerConnectionId, dataChannelId));
@@ -1263,7 +1251,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule implements Activity
         }
     }
 
-    @ReactMethod
     public void dataChannelSend(int peerConnectionId,
                                 int dataChannelId,
                                 String data,
