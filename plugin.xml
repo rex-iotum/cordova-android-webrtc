@@ -10,21 +10,32 @@
     <engine name="cordova" version=">=3.0.0" />
   </engines>
 
-  <js-module src="www/audiotoggle.js" name="AudioToggle">
-    <clobbers target="AudioToggle" />
+  <js-module src="www/index.js" name="CordovaAndroidWebRTC">
+    <clobbers target="CordovaAndroidWebRTC" />
   </js-module>
 
   <platform name="android">
-    <source-file src="src/android/com/dooble/audiotoggle/AudioTogglePlugin.java" target-dir="src/com/dooble/audiotoggle" />
+    <source-file src="src/android/com/oney/WebRTCModule/CameraEventsHandler.java" target-dir="src/com/oney/CameraEventsHandler" />
+    <source-file src="src/android/com/oney/WebRTCModule/DataChannelObserver.java" target-dir="src/com/oney/DataChannelObserver" />
+    <source-file src="src/android/com/oney/WebRTCModule/EglUtils.java" target-dir="src/com/oney/EglUtils" />
+    <source-file src="src/android/com/oney/WebRTCModule/GetUserMediaImpl.java" target-dir="src/com/oney/GetUserMediaImpl" />
+    <source-file src="src/android/com/oney/WebRTCModule/PeerConnectionObserver.java" target-dir="src/com/oney/PeerConnectionObserver" />
+    <source-file src="src/android/com/oney/WebRTCModule/ReactBridgeUtil.java" target-dir="src/com/oney/ReactBridgeUtil" />
+    <source-file src="src/android/com/oney/WebRTCModule/RTCVideoViewManager.java" target-dir="src/com/oney/RTCVideoViewManager" />
+    <source-file src="src/android/com/oney/WebRTCModule/ThreadUtils.java" target-dir="src/com/oney/ThreadUtils" />
+    <source-file src="src/android/com/oney/WebRTCModule/VideoCaptureController.java" target-dir="src/com/oney/VideoCaptureController" />
+    <source-file src="src/android/com/oney/WebRTCModule/VideoTrackAdapter.java" target-dir="src/com/oney/VideoTrackAdapter" />
+    <source-file src="src/android/com/oney/WebRTCModule/WebRTCModule.java" target-dir="src/com/oney/WebRTCModule" />
+    <source-file src="src/android/com/oney/WebRTCModule/WebRTCModulePackage.java" target-dir="src/com/oney/WebRTCModulePackage" />
+    <source-file src="src/android/com/oney/WebRTCModule/WebRTCView.java" target-dir="src/com/oney/WebRTCView" />
+    <source-file src="src/android/com/oney/WebRTCModule/WebRTCView.java" target-dir="src/com/oney/WebRTCView" />
+    <source-file src="src/android/libs/libjingle_peerconnection.so.jar" target-dir="src/libs" />
+    <source-file src="src/android/libs/libwebrtc.jar" target-dir="src/libs" />
 
     <config-file target="res/xml/config.xml" parent="/*">
-      <feature name="AudioTogglePlugin">
-        <param name="android-package" value="com.dooble.audiotoggle.AudioTogglePlugin" />
+      <feature name="CordovaAndroidWebRTC">
+        <param name="android-package" value="com.oney.WebRTCModule.WebRTCModule" />
       </feature>
-    </config-file>
-
-    <config-file target="AndroidManifest.xml" parent="/manifest">
-      <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     </config-file>
   </platform>
 </plugin>
