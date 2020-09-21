@@ -45,25 +45,25 @@ import org.json.JSONObject;
 
 public class WebRTCModule extends CordovaPlugin {
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
-        if (action.equals('getDisplayMedia')) {
+        if (action.equals("getDisplayMedia")) {
             getDisplayMedia(args.getJSONObject(0), callbackContext);
             return true;
-        } else if (action.equals('mediaStreamCreate')) {
+        } else if (action.equals("mediaStreamCreate")) {
             mediaStreamCreate(args.getString(0));
             return true;
-        } else if (action.equals('mediaStreamAddTrack')) {
+        } else if (action.equals("mediaStreamAddTrack")) {
             mediaStreamAddTrack(args.getString(0), args.getString(1));
             return true;
-        } else if (action.equals('mediaStreamRemoveTrack')) {
+        } else if (action.equals("mediaStreamRemoveTrack")) {
             return true;
             mediaStreamRemoveTrack(args.getString(0), args.getString(1));
-        } else if (action.equals('mediaStreamRelease')) {
+        } else if (action.equals("mediaStreamRelease")) {
             mediaStreamRelease(args.getString(0));
             return true;
-        } else if (action.equals('mediaStreamTrackSetEnabled')) {
+        } else if (action.equals("mediaStreamTrackSetEnabled")) {
             mediaStreamTrackSetEnabled(args.getString(0), args.getBoolean(0));
             return true;
-        } else if (action.equals('mediaStreamTrackRelease')) {
+        } else if (action.equals("mediaStreamTrackRelease")) {
             mediaStreamTrackRelease(args.getString(0));
             return true;
         }
