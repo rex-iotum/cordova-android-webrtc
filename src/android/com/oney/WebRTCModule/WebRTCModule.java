@@ -55,8 +55,8 @@ public class WebRTCModule extends CordovaPlugin {
             mediaStreamAddTrack(args.getString(0), args.getString(1));
             return true;
         } else if (action.equals("mediaStreamRemoveTrack")) {
-            return true;
             mediaStreamRemoveTrack(args.getString(0), args.getString(1));
+            return true;
         } else if (action.equals("mediaStreamRelease")) {
             mediaStreamRelease(args.getString(0));
             return true;
