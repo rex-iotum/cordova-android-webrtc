@@ -28,7 +28,6 @@
     <source-file src="src/android/com/oney/WebRTCModule/WebRTCModule.java" target-dir="src/com/oney/WebRTCModule" />
     <source-file src="src/android/com/oney/WebRTCModule/WebRTCModulePackage.java" target-dir="src/com/oney/WebRTCModulePackage" />
     <source-file src="src/android/com/oney/WebRTCModule/WebRTCView.java" target-dir="src/com/oney/WebRTCView" />
-    <source-file src="src/android/com/oney/WebRTCModule/WebRTCView.java" target-dir="src/com/oney/WebRTCView" />
     <source-file src="src/android/libs/libjingle_peerconnection.so.jar" target-dir="src/libs" />
     <source-file src="src/android/libs/libwebrtc.jar" target-dir="src/libs" />
 
