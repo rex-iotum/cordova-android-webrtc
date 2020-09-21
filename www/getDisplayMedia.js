@@ -20,7 +20,7 @@ const getDisplayMedia = function (constraints = {}) {
   constraints = RTCUtil.normalizeConstraints(constraints);
 
   return new Promise((resolve, reject) => {
-    cordova.exec((id, tracks) => {
+    exec((id, tracks) => {
       let stream = new MediaStream({
         streamId: id,
         streamReactTag: id,
