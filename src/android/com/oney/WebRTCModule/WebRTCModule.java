@@ -66,6 +66,9 @@ public class WebRTCModule extends CordovaPlugin {
         } else if (action.equals("mediaStreamTrackRelease")) {
             mediaStreamTrackRelease(args.getString(0));
             return true;
+        } else if (action.equals("init")) {
+            WebRTCModule();
+            return true;
         }
         return false;
     }
@@ -247,14 +250,8 @@ public class WebRTCModule extends CordovaPlugin {
             this.videoEncoderFactory = videoEncoderFactory;
         }
     }
-
-    public WebRTCModule(Context context) {
-        this(context, null);
-    }
-
-    public WebRTCModule(Context context, Options options) {
-        super(context);
-
+    
+    public void WebRTCModule() {
         mPeerConnectionObservers = new SparseArray<>();
         localStreams = new HashMap<>();
 
@@ -262,14 +259,14 @@ public class WebRTCModule extends CordovaPlugin {
         this.context = webView.getContext();
         context.addActivityEventListener(this);
 
-        ThreadUtils.runOnExecutor(() -> initAsync(options));
+        ThreadUtils.runOnExecutor(() -> initAsync(null));
     }
 
     /**
      * Invoked asynchronously to initialize this {@code WebRTCModule} instance.
      */
     private void initAsync(Options options) {
-        Context context = getContext();
+        Context context = webView.getContext();
 
         PeerConnectionFactory.initialize(
             PeerConnectionFactory.InitializationOptions.builder(context)
