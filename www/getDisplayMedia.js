@@ -20,31 +20,31 @@ const getDisplayMedia = function (constraints = {}) {
   constraints = RTCUtil.normalizeConstraints(constraints);
 
   return new Promise((resolve, reject) => {
-      NativeModules.WebRTCModule.getDisplayMedia(constraints, (id, tracks) => {
-        let stream = new MediaStream({
-          streamId: id,
-          streamReactTag: id,
-          tracks
-        });
-        stream._tracks.forEach(track => {
-          track.applyConstraints = function () {
-            // FIXME: ScreenObtainer.obtainScreenFromGetDisplayMedia.
-            return Promise.resolve();
-          }.bind(track);
-        })
-        resolve(stream);
-      }, (type, message) => {
-        let error;
-        switch (type) {
+    cordova.exec((id, tracks) => {
+      let stream = new MediaStream({
+        streamId: id,
+        streamReactTag: id,
+        tracks
+      });
+      stream._tracks.forEach(track => {
+        track.applyConstraints = function () {
+          // FIXME: ScreenObtainer.obtainScreenFromGetDisplayMedia.
+          return Promise.resolve();
+        }.bind(track);
+      })
+      resolve(stream);
+    }, (type, message) => {
+      let error;
+      switch (type) {
         case 'TypeError':
           error = new TypeError(message);
           break;
-        }
-        if (!error) {
-          error = new MediaStreamError({ message, name: type });
-        }
-        reject(error);
-      });
+      }
+      if (!error) {
+        error = new MediaStreamError({ message, name: type });
+      }
+      reject(error);
+    }, null, 'WebRTCModule', 'getDisplayMedia', [constraints])
   });
 }
 
