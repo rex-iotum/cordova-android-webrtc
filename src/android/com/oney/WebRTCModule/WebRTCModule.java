@@ -50,12 +50,22 @@ public class WebRTCModule extends CordovaPlugin {
             return true;
         } else if (action.equals('mediaStreamCreate')) {
             mediaStreamCreate(args.getString(0));
+            return true;
         } else if (action.equals('mediaStreamAddTrack')) {
             mediaStreamAddTrack(args.getString(0), args.getString(1));
+            return true;
         } else if (action.equals('mediaStreamRemoveTrack')) {
+            return true;
             mediaStreamRemoveTrack(args.getString(0), args.getString(1));
         } else if (action.equals('mediaStreamRelease')) {
             mediaStreamRelease(args.getString(0));
+            return true;
+        } else if (action.equals('mediaStreamTrackSetEnabled')) {
+            mediaStreamTrackSetEnabled(args.getString(0), args.getBoolean(0));
+            return true;
+        } else if (action.equals('mediaStreamTrackRelease')) {
+            mediaStreamTrackRelease(args.getString(0));
+            return true;
         }
         return false;
     }
